@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
@@ -31,55 +32,49 @@ export default function Index() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const mockData: ExcelData = {
-      headers: ['Период', 'Доход', 'Расход', 'Прибыль', 'Рост %'],
-      rows: [
-        ['Янв 2024', 450000, 280000, 170000, 12.5],
-        ['Фев 2024', 520000, 310000, 210000, 23.5],
-        ['Мар 2024', 480000, 290000, 190000, -7.7],
-        ['Апр 2024', 610000, 340000, 270000, 27.1],
-        ['Май 2024', 580000, 320000, 260000, -4.9],
-        ['Июн 2024', 670000, 380000, 290000, 15.5],
-        ['Июл 2024', 720000, 410000, 310000, 7.5],
-        ['Авг 2024', 690000, 395000, 295000, -4.2],
-        ['Сен 2024', 780000, 440000, 340000, 13.0],
-        ['Окт 2024', 820000, 460000, 360000, 5.1],
-        ['Ноя 2024', 850000, 480000, 370000, 3.7],
-        ['Дек 2024', 920000, 510000, 410000, 8.2],
-      ]
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result;
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as (string | number)[][];
+      
+      if (jsonData.length > 0) {
+        const headers = jsonData[0].map(h => String(h));
+        const rows = jsonData.slice(1);
+        
+        setExcelData({ headers, rows });
+      }
     };
-
-    setExcelData(mockData);
-    
-    setTimeout(() => {
-      const mockAnalysis: AnalysisResult = {
-        totalRevenue: 7690000,
-        avgRevenue: 640833,
-        growth: 104.4,
-        forecast: 980000,
-        insights: [
-          'Стабильный рост доходов на протяжении года (+104.4%)',
-          'Пиковый период: Q4 2024 (Окт-Дек)',
-          'Средняя маржинальность: 42.8%',
-          'Минимальный месяц: Январь (450К)'
-        ],
-        recommendations: [
-          'Увеличить инвестиции в маркетинг в Q1 для стабилизации доходов',
-          'Оптимизировать расходы в периоды спада (Март, Май, Август)',
-          'Масштабировать успешные стратегии Q4 на весь год',
-          'Рассмотреть диверсификацию источников дохода'
-        ]
-      };
-      setAnalysis(mockAnalysis);
-    }, 1000);
+    reader.readAsBinaryString(file);
   };
 
-  const analyzeWithAI = () => {
+  const analyzeWithAI = async () => {
+    if (!excelData) return;
+    
     setIsAnalyzing(true);
     
-    setTimeout(() => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/6a0bf242-3aa7-4c36-afdb-b25d9712b461', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ excelData }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setAnalysis(result);
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const filteredRows = excelData?.rows.filter(row =>

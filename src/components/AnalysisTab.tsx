@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface AnalysisResult {
   totalRevenue: number;
@@ -15,6 +18,29 @@ interface AnalysisTabProps {
   isAnalyzing: boolean;
   analysis: AnalysisResult | null;
 }
+
+const exportToPDF = async () => {
+  const element = document.getElementById('analysis-content');
+  if (!element) return;
+  
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    backgroundColor: '#1a1f2c'
+  });
+  
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+  
+  const imgWidth = 210;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  
+  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+  pdf.save('financial-analysis.pdf');
+};
 
 export default function AnalysisTab({ isAnalyzing, analysis }: AnalysisTabProps) {
   if (isAnalyzing) {
@@ -53,7 +79,14 @@ export default function AnalysisTab({ isAnalyzing, analysis }: AnalysisTabProps)
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <div className="flex justify-end mb-4">
+        <Button onClick={exportToPDF} variant="outline">
+          <Icon name="Download" size={16} className="mr-2" />
+          Экспорт в PDF
+        </Button>
+      </div>
+      <div id="analysis-content" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium">Общий доход</CardTitle>
@@ -155,6 +188,7 @@ export default function AnalysisTab({ isAnalyzing, analysis }: AnalysisTabProps)
           </ul>
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 }

@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Test AI analysis with sample data",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "excelData": {
+          "headers": ["Период", "Доход", "Расход", "Прибыль", "Рост %"],
+          "rows": [
+            ["Янв 2024", 450000, 280000, 170000, 12.5],
+            ["Фев 2024", 520000, 310000, 210000, 23.5],
+            ["Мар 2024", 480000, 290000, 190000, -7.7]
+          ]
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "totalRevenue": "number",
+        "avgRevenue": "number",
+        "growth": "number",
+        "forecast": "number",
+        "insights": "array",
+        "recommendations": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
